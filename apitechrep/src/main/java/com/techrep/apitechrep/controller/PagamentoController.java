@@ -42,18 +42,14 @@ public class PagamentoController {
 
 package com.techrep.apitechrep.controller;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-
+import com.techrep.apitechrep.entity.LocacaoEntity;
+import com.techrep.apitechrep.entity.PagamentoEntity;
+import com.techrep.apitechrep.repository.LocacaoRepository;
+import com.techrep.apitechrep.repository.PagamentoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.techrep.apitechrep.entity.PagamentoEntity;
-import com.techrep.apitechrep.entity.LocacaoEntity;
-import com.techrep.apitechrep.repository.PagamentoRepository;
-import com.techrep.apitechrep.repository.LocacaoRepository;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("api/pagamentos")
@@ -66,36 +62,19 @@ public class PagamentoController {
     private LocacaoRepository locacaoRepository;
 
     @PostMapping
-    public ResponseEntity<String> criarPagamentos(@RequestBody PagamentoEntity pagamento) {
-        if (pagamento.getLocacao() == null || pagamento.getLocacao().getLocacaoId() == 0) {
-            return ResponseEntity.badRequest().body("Locação obrigatória para o pagamento");
-        }
-
-        // Buscar a locação no banco
-        LocacaoEntity locacao = locacaoRepository.findById(pagamento.getLocacao().getLocacaoId())
+    public PagamentoEntity criarPagamento(@RequestBody PagamentoEntity pagamento) {
+        // Buscar locação
+        int locacaoId = pagamento.getLocacao().getLocacaoId();
+        LocacaoEntity locacao = locacaoRepository.findById(locacaoId)
                 .orElseThrow(() -> new RuntimeException("Locação não encontrada"));
 
-        // Calcular dias
-        long dias = ChronoUnit.DAYS.between(
-                locacao.getDataInicio().toLocalDate(),
-                locacao.getDataFim().toLocalDate());
-        dias = dias == 0 ? 1 : dias;
+        // Associar o valor total da locação ao pagamento
+        pagamento.setValorPago(locacao.getValorTotal());
 
-        // Calcular valor
-        double total = locacao.getPrecoDia() * dias * locacao.getQuantidade();
-
-        // Preencher pagamento
-        pagamento.setValorTotal(total);
+        // Definir data de pagamento
         pagamento.setDataPagamento(LocalDateTime.now());
 
-        pagamentoRepository.save(pagamento);
-
-        return ResponseEntity.ok("Pagamento no valor de R$ " + total + " realizado com sucesso!");
-    }
-
-    @GetMapping("/cliente/{clientesId}")
-    public ResponseEntity<List<PagamentoEntity>> buscarPagamentosPorCliente(@PathVariable int clientesId) {
-        List<PagamentoEntity> pagamentos = pagamentoRepository.findByCliente_ClientesId(clientesId);
-        return ResponseEntity.ok(pagamentos);
+        // Salvar pagamento
+        return pagamentoRepository.save(pagamento);
     }
 }

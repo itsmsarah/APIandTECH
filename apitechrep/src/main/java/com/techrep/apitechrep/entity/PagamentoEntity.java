@@ -1,5 +1,6 @@
 package com.techrep.apitechrep.entity;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
@@ -20,11 +21,16 @@ public class PagamentoEntity {
 
     private LocalDateTime dataPagamento;
 
-    private double valorTotal;
+    @ManyToOne
+    @JoinColumn(name = "clientes_id") // nome da coluna no banco
+    private ClientesEntity cliente;
 
     @ManyToOne
     @JoinColumn(name = "locacao_id") // chave estrangeira para locacao
     private LocacaoEntity locacao;
+    
+    @Column(name = "valor_pago", precision = 10, scale = 2)
+    private BigDecimal valorPago;
 
     // CONSTRUTORES
     public PagamentoEntity() {
@@ -32,7 +38,7 @@ public class PagamentoEntity {
 
     public PagamentoEntity(int pagamentoId, String numeroCartao, String nomeTitular,
                            String validade, String cvv, String tipoCartao, LocalDateTime dataPagamento,
-                           double valorTotal, LocacaoEntity locacao) {
+                           BigDecimal valorPago, LocacaoEntity locacao) {
         this.pagamentoId = pagamentoId;
         this.numeroCartao = numeroCartao;
         this.nomeTitular = nomeTitular;
@@ -40,8 +46,8 @@ public class PagamentoEntity {
         this.cvv = cvv;
         this.tipoCartao = tipoCartao;
         this.dataPagamento = dataPagamento;
-        this.valorTotal = valorTotal;
         this.locacao = locacao;
+        this.valorPago = valorPago;
     }
 
     // GETTERS E SETTERS
@@ -102,13 +108,6 @@ public class PagamentoEntity {
         this.dataPagamento = dataPagamento;
     }
 
-    public double getValorTotal() {
-        return valorTotal;
-    }
-
-    public void setValorTotal(double valorTotal) {
-        this.valorTotal = valorTotal;
-    }
 
     public LocacaoEntity getLocacao() {
         return locacao;
@@ -117,4 +116,12 @@ public class PagamentoEntity {
     public void setLocacao(LocacaoEntity locacao) {
         this.locacao = locacao;
     }
+    
+    public BigDecimal getValorPago() {
+        return valorPago;
+        }
+
+        public void setValorPago(BigDecimal valorPago) {
+        this.valorPago = valorPago;
+       }
 }

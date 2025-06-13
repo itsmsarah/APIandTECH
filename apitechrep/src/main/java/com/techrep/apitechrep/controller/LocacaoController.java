@@ -27,76 +27,82 @@ public class LocacaoController {
 
 package com.techrep.apitechrep.controller;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
-
-import org.springframework.web.bind.annotation.*;
 
 import com.techrep.apitechrep.entity.LocacaoEntity;
-import com.techrep.apitechrep.repository.LocacaoRepository;
-import com.techrep.apitechrep.repository.ClientesRepository;
-import com.techrep.apitechrep.repository.ProdutoRepository;
 import com.techrep.apitechrep.entity.ProdutoEntity;
+import com.techrep.apitechrep.entity.ClientesEntity; // Supondo que você tem ClienteEntity
+import com.techrep.apitechrep.repository.LocacaoRepository;
+import com.techrep.apitechrep.repository.ProdutoRepository;
+import com.techrep.apitechrep.repository.ClientesRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
 
-import com.techrep.apitechrep.entity.ClientesEntity;
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("api/locacao")
+@RequestMapping("api/locacoes")
 public class LocacaoController {
 
-    private final LocacaoRepository locacaoRepository;
-    private final ClientesRepository clienteRepository;
-    private final ProdutoRepository produtoRepository;
+    @Autowired
+    private LocacaoRepository locacaoRepository;
 
-    public LocacaoController(LocacaoRepository locacaoRepository, ClientesRepository clienteRepository, ProdutoRepository produtoRepository) {
-        this.locacaoRepository = locacaoRepository;
-        this.clienteRepository = clienteRepository;
-        this.produtoRepository = produtoRepository;
-    }
+    @Autowired
+    private ProdutoRepository produtoRepository;
+
+    @Autowired
+    private ClientesRepository clienteRepository;
 
     @PostMapping
     public LocacaoEntity criarLocacao(@RequestBody LocacaoEntity locacao) {
-        // 1. Verificar se cliente é físico e limitar a 1 item
-        ClientesEntity cliente = clienteRepository.findById(locacao.getClientesId())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-        
+        // Verifica se cliente existe
+        Optional<ClientesEntity> clienteOpt = clienteRepository.findById(locacao.getClientesId());
+        if (clienteOpt.isEmpty()) {
+            throw new RuntimeException("Cliente não encontrado");
+        }
+        ClientesEntity cliente = clienteOpt.get();
+
+        // Validação de cliente com CPF: apenas 1 notebook por vez
         if (cliente.getCpf() != null && locacao.getQuantidade() > 1) {
             throw new RuntimeException("Clientes com CPF (físicos) só podem alugar 1 notebook por vez.");
         }
 
+        // Verifica se o produto existe
+        Optional<ProdutoEntity> produtoOpt = produtoRepository.findById(locacao.getProdutoId());
+        if (produtoOpt.isEmpty()) {
+            throw new RuntimeException("Produto não encontrado");
+        }
+        ProdutoEntity produto = produtoOpt.get();
 
-        // 2. Verificar disponibilidade
+        // Verifica se o produto já está alugado nas datas informadas
         List<LocacaoEntity> conflitos = locacaoRepository.findByProdutoIdAndDataFimAfterAndDataInicioBefore(
                 locacao.getProdutoId(),
                 locacao.getDataInicio(),
-                locacao.getDataFim());
+                locacao.getDataFim()
+        );
 
         if (!conflitos.isEmpty()) {
             locacao.setStatusLocacao("INDISPONIVEL");
+            throw new RuntimeException("Produto já alugado nas datas informadas.");
         } else {
             locacao.setStatusLocacao("DISPONIVEL");
         }
 
-        // 3. Calcular valor da locação (se você tiver um campo para isso)
-        com.techrep.apitechrep.controller.ProdutoController produto = produtoRepository.findById(locacao.getProdutoId())
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+        // Calcula número de dias
+        long dias = Duration.between(locacao.getDataInicio(), locacao.getDataFim()).toDays();
+        if (dias <= 0) {
+            dias = 1;
+        }
 
-        BigDecimal precoDia = produto.getPrecoDia(); // Assumindo que existe esse campo
+        // Calcula valor total
+        BigDecimal valorTotal = produto.getPrecoDia()
+                .multiply(BigDecimal.valueOf(dias))
+                .multiply(BigDecimal.valueOf(locacao.getQuantidade()));
 
-        long dias = ChronoUnit.DAYS.between(
-                locacao.getDataInicio().toLocalDate(), 
-                locacao.getDataFim().toLocalDate());
-        dias = dias == 0 ? 1 : dias;
-
-        BigDecimal total = precoDia.multiply(BigDecimal.valueOf(dias))
-                                   .multiply(BigDecimal.valueOf(locacao.getQuantidade()));
-
-        // Você pode salvar esse valor em outro campo, ou retornar como parte do DTO
-        //System.out.println("Valor total da locação: R$ " + total);
+        locacao.setValorTotal(valorTotal);
 
         return locacaoRepository.save(locacao);
     }
 }
-

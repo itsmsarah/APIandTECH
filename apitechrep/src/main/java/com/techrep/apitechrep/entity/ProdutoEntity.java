@@ -17,7 +17,6 @@ public class ProdutoEntity {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int produtoId;
 
-    private String descricacao;
     private String nomeProduto;
     private int quantidade;
     private String processador;
@@ -31,11 +30,10 @@ public class ProdutoEntity {
     public ProdutoEntity() {
     }
 
-    public ProdutoEntity(int produtoId, String descricacao, String nomeProduto, int quantidade,
+    public ProdutoEntity(int produtoId, String nomeProduto, int quantidade,
                          String processador, String memoriaRam, String armazenamento,
                          String statusProduto, BigDecimal precoDia) {
         this.produtoId = produtoId;
-        this.descricacao = descricacao;
         this.nomeProduto = nomeProduto;
         this.quantidade = quantidade;
         this.processador = processador;
@@ -51,14 +49,6 @@ public class ProdutoEntity {
 
     public void setProdutoId(int produtoId) {
         this.produtoId = produtoId;
-    }
-
-    public String getDescricacao() {
-        return descricacao;
-    }
-
-    public void setDescricacao(String descricacao) {
-        this.descricacao = descricacao;
     }
 
     public String getNomeProduto() {
@@ -108,12 +98,18 @@ public class ProdutoEntity {
     public void setStatusProduto(String statusProduto) {
         this.statusProduto = statusProduto;
     }
-
+    
     public BigDecimal getPrecoDia() {
         return precoDia;
     }
 
+    // SETTER FALTANDO: adicione este!
     public void setPrecoDia(BigDecimal precoDia) {
         this.precoDia = precoDia;
     }
+    
+
+	
+
+  
 }
